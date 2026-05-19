@@ -1,7 +1,19 @@
-# CRISP: Continual Retrieval & Indexing System for Perception
+<p align="center">
+  <img src="src\crisp\img\CRISP_maskot.png" alt="CRISP Mascot" width="400">
+</p>
 
-**CRISP** is a lightweight Python library for **incremental image classification** using frozen visual encoders, vector-based retrieval, and voting-based classification.
+<h1 align="center">
+  🧊 CRISP
+</h1>
 
+<h3 align="center">
+  Continual Retrieval & Indexing System for Perception<br>
+  <em>without Catastrophic Forgetting</em>
+</h3>
+
+<p align="center">
+  <strong>A modular, RAG-style incremental image classification system.</strong><br>
+</p>
 Instead of retraining the model every time new data or new classes are added, CRISP stores image embeddings in a memory bank and retrieves the most similar samples during inference. This makes CRISP suitable for experiments in **incremental learning**, **retrieval-augmented classification**, and **image classification with expandable class memory**.
 
 Repository:
@@ -463,59 +475,7 @@ crisp predict \
 
 ## 12. System Flowchart
 
-### 12.1 Complete CRISP Flow
-
-```mermaid
-flowchart TD
-    A[Input Image] --> B[Image Preprocessing]
-    B --> C[Frozen Image Encoder]
-    C --> D[L2-Normalized Feature Embedding]
-
-    D --> E{Mode?}
-
-    E -->|Ingestion| F[New Labeled Image]
-    F --> G[Store Embedding in Memory Bank]
-    G --> H[Update or Rebuild Vector Index]
-    H --> I[Ready for Retrieval]
-
-    E -->|Inference| J[Query Embedding]
-    J --> K[Top-k Nearest Neighbor Search]
-    K --> L[Fetch Labels and Metadata]
-    L --> M[Voting Logic]
-    M --> N{Similarity >= Threshold?}
-    N -->|Yes| O[Predicted Class Label]
-    N -->|No| P[Unknown Class]
-```
-
-### 12.2 Ingestion Flow
-
-```mermaid
-flowchart TD
-    A[New Image + Label] --> B[Preprocessing]
-    B --> C[Frozen Encoder]
-    C --> D[Embedding Vector]
-    D --> E[L2 Normalization]
-    E --> F[Memory Bank]
-    F --> G[Vector Index]
-    G --> H[Updated Knowledge Memory]
-```
-
-### 12.3 Inference Flow
-
-```mermaid
-flowchart TD
-    A[Query Image] --> B[Preprocessing]
-    B --> C[Frozen Encoder]
-    C --> D[Query Embedding]
-    D --> E[Search Top-k Nearest Neighbors]
-    E --> F[Retrieve Labels + Similarity Scores]
-    F --> G[Weighted or Majority Voting]
-    G --> H{Best Similarity >= Threshold?}
-    H -->|Yes| I[Predicted Class]
-    H -->|No| J[Unknown Class]
-```
-
----
+![CRISP/src/crisp/img/image.png](src/crisp/img/image.png)
 
 ## 13. How CRISP Works
 
@@ -774,7 +734,7 @@ If you use CRISP in an academic project, you can cite this repository as:
 ```bibtex
 @software{crisp2026,
   title = {CRISP: Continual Retrieval & Indexing System for Perception},
-  author = {Hokimastah},
+  author = {Satrio Puji Danuirto},
   year = {2026},
   url = {https://github.com/Hokimastah/CRISP}
 }
