@@ -1,0 +1,69 @@
+[build-system]
+requires = ["setuptools>=77.0.3", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "crisp"
+version = "0.1.0"
+description = "CRISP: Continual Retrieval & Indexing System for Perception"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+authors = [
+  { name = "Your Name", email = "your.email@example.com" }
+]
+keywords = [
+  "continual-learning",
+  "incremental-learning",
+  "image-classification",
+  "retrieval",
+  "rag",
+  "resnet",
+  "clip",
+  "annoy",
+  "faiss",
+  "computer-vision"
+]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence"
+]
+dependencies = [
+  "torch>=2.0.0",
+  "torchvision>=0.15.0",
+  "numpy>=1.23.0",
+  "Pillow>=9.0.0",
+  "tqdm>=4.64.0"
+]
+
+[project.optional-dependencies]
+annoy = ["annoy>=1.17.0"]
+faiss = ["faiss-cpu>=1.7.4"]
+clip = ["open_clip_torch>=2.20.0"]
+all = [
+  "annoy>=1.17.0",
+  "faiss-cpu>=1.7.4",
+  "open_clip_torch>=2.20.0"
+]
+dev = [
+  "pytest>=7.0.0",
+  "build>=1.0.0",
+  "twine>=5.0.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/username/crisp"
+Repository = "https://github.com/username/crisp"
+Issues = "https://github.com/username/crisp/issues"
+
+[project.scripts]
+crisp = "crisp.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
