@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "crisp"
-version = "0.1.0"
-description = "CRISP: Continual Retrieval & Indexing System for Perception"
+version = "0.1.2"
+description = "CRISP: Continual Retrieval & Indexing System for Perception (v1) with ArcFace support"
 readme = "README.md"
 requires-python = ">=3.9"
 license = "MIT"
 authors = [
-  { name = "Your Name", email = "your.email@example.com" }
+  { name = "Satrio Puji Danutirto", email = "satriopujidanutirt@gmail.com" }
 ]
 keywords = [
   "continual-learning",
@@ -20,9 +20,11 @@ keywords = [
   "rag",
   "resnet",
   "clip",
+  "arcface",
   "annoy",
   "faiss",
-  "computer-vision"
+  "computer-vision",
+  "face-recognition"
 ]
 classifiers = [
   "Programming Language :: Python :: 3",
@@ -39,7 +41,9 @@ dependencies = [
   "torchvision>=0.15.0",
   "numpy>=1.23.0",
   "Pillow>=9.0.0",
-  "tqdm>=4.64.0"
+  "tqdm>=4.64.0",
+  "opencv-python>=4.7.0",
+  "insightface>=0.7.3"
 ]
 
 [project.optional-dependencies]
@@ -49,7 +53,9 @@ clip = ["open_clip_torch>=2.20.0"]
 all = [
   "annoy>=1.17.0",
   "faiss-cpu>=1.7.4",
-  "open_clip_torch>=2.20.0"
+  "open_clip_torch>=2.20.0",
+  "insightface>=0.7.3",
+  "opencv-python>=4.7.0"
 ]
 dev = [
   "pytest>=7.0.0",
@@ -58,9 +64,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/username/crisp"
-Repository = "https://github.com/username/crisp"
-Issues = "https://github.com/username/crisp/issues"
+Homepage = "https://github.com/Hokimastah/CRISP"
+Repository = "https://github.com/Hokimastah/CRISP"
+Issues = "https://github.com/Hokimastah/CRISP/issues"
 
 [project.scripts]
 crisp = "crisp.cli:main"
