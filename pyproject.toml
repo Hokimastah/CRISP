@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "crisp"
-version = "0.1.2"
-description = "CRISP: Continual Retrieval & Indexing System for Perception (v1) with ArcFace support"
+version = "0.2.0"
+description = "CRISP: Continual Retrieval & Indexing System for Perception with trainable-then-frozen ResNet backbone support"
 readme = "README.md"
 requires-python = ">=3.9"
 license = "MIT"
@@ -41,13 +41,12 @@ dependencies = [
   "torchvision>=0.15.0",
   "numpy>=1.23.0",
   "Pillow>=9.0.0",
-  "tqdm>=4.64.0",
-  "opencv-python>=4.7.0",
-  "insightface>=0.7.3"
+  "tqdm>=4.64.0"
 ]
 
 [project.optional-dependencies]
 annoy = ["annoy>=1.17.0"]
+arcface = ["insightface>=0.7.3", "opencv-python>=4.7.0"]
 faiss = ["faiss-cpu>=1.7.4"]
 clip = ["open_clip_torch>=2.20.0"]
 all = [

@@ -6,27 +6,26 @@ def main():
         encoder="resnet50",
         retriever="numpy",
         pretrained=True,
-        device="cpu",
+        device="cuda",
         top_k=5,
         voting="weighted",
     )
 
-    # Optional but recommended for a domain-specific dataset:
-    # train the backbone first, then freeze it before indexing.
-    clf.fit_backbone(
+    history = clf.fit_backbone(
         train_folder="dataset_train",
-        epochs=5,
-        batch_size=16,
+        epochs=10,
+        batch_size=32,
         lr=1e-4,
         save_path="resnet50_crisp.pt",
     )
+    print(history)
 
+    # The backbone is now frozen. Build embeddings using the trained backbone.
     clf.add_folder("dataset_train")
     clf.save("memory_bank.pkl")
 
     result = clf.predict("test_image.jpg")
-    print(result["predicted_label"])
-    print(result["scores"])
+    print(result)
 
 
 if __name__ == "__main__":

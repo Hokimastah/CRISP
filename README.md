@@ -1,20 +1,17 @@
 <p align="center">
-  <img src="src\crisp\img\CRISP_maskot.png" alt="CRISP Mascot" width="400">
+  <img src="src/crisp/img/CRISP_maskot.png" alt="CRISP Mascot" width="400">
 </p>
 
-<h1 align="center">
-  🧊 CRISP
-</h1>
+<h1 align="center">🧊 CRISP</h1>
 
 <h3 align="center">
   Continual Retrieval & Indexing System for Perception<br>
-  <em>without Catastrophic Forgetting</em>
+  <em>Train Backbone First, Freeze Later, Retrieve Continuously</em>
 </h3>
 
 <p align="center">
-  <strong>A modular, RAG-style incremental image classification system.</strong><br>
+  <strong>A modular retrieval-based image classification system for incremental learning experiments.</strong>
 </p>
-Instead of retraining the model every time new data or new classes are added, CRISP stores image embeddings in a memory bank and retrieves the most similar samples during inference. This makes CRISP suitable for experiments in **incremental learning**, **retrieval-augmented classification**, and **image classification with expandable class memory**.
 
 Repository:
 
@@ -26,35 +23,36 @@ https://github.com/Hokimastah/CRISP
 
 ## 1. Main Idea
 
-CRISP follows a simple principle:
+CRISP classifies images by retrieving the most similar embeddings from a memory bank. In this revised version, the ResNet backbone can be trained first on a folder-based classification dataset. After training, the backbone is frozen and used as a stable feature extractor for indexing and retrieval.
 
 ```text
-Image
-→ Frozen Encoder
-→ Feature Embedding
-→ Vector Index
-→ Top-k Retrieval
+Training images
+→ Train ResNet backbone with temporary classification head
+→ Discard temporary head
+→ Freeze trained backbone
+→ Extract embeddings
+→ Store embeddings in memory bank
+→ Top-k retrieval
 → Voting
-→ Predicted Class
+→ Predicted class
 ```
 
-The backbone is **frozen**, meaning its weights are not updated during incremental learning. New samples are added by extracting embeddings and storing them in the memory bank.
-
-This design avoids representation drift and reduces the risk of catastrophic forgetting because old embeddings remain compatible with new embeddings as long as the same frozen encoder is used.
+The important rule is: **after the backbone is frozen and a memory bank has been built, do not change the backbone weights unless you rebuild the memory bank.** Old embeddings and new embeddings must be produced by the same frozen encoder.
 
 ---
 
 ## 2. Key Features
 
-- Frozen image encoder for stable feature extraction
-- Incremental add-only memory update
+- Trainable-then-frozen ResNet backbone
+- Frozen CLIP and ArcFace encoder support
+- Incremental add-only memory update after freezing
 - Retrieval-based classification
-- Top-k nearest neighbor search
+- Top-k nearest-neighbor search
 - Weighted voting and majority voting
 - Optional unknown-class detection using similarity threshold
 - Modular encoder backend
-- Modular retrieval backend
-- CLI support for indexing and prediction
+- Modular retrieval backend: NumPy, Annoy, FAISS
+- CLI support for backbone training, indexing, and prediction
 - Installable as a Python library
 
 ---
@@ -65,19 +63,20 @@ This design avoids representation drift and reduces the risk of catastrophic for
 
 | Encoder | Description |
 |---|---|
-| `resnet18` | Frozen ResNet18 feature extractor |
-| `resnet34` | Frozen ResNet34 feature extractor |
-| `resnet50` | Frozen ResNet50 feature extractor |
-| `resnet101` | Frozen ResNet101 feature extractor |
-| `resnet152` | Frozen ResNet152 feature extractor |
+| `resnet18` | ResNet18 backbone, can be trained first then frozen |
+| `resnet34` | ResNet34 backbone, can be trained first then frozen |
+| `resnet50` | ResNet50 backbone, can be trained first then frozen |
+| `resnet101` | ResNet101 backbone, can be trained first then frozen |
+| `resnet152` | ResNet152 backbone, can be trained first then frozen |
 | `clip` | Frozen CLIP image encoder using `open_clip_torch` |
+| `arcface` | Frozen face-specific embedding using `insightface` |
 
 ### 3.2 Retrieval Backends
 
 | Retriever | Description |
 |---|---|
 | `numpy` | Exact brute-force cosine retrieval using NumPy |
-| `annoy` | Approximate nearest neighbor retrieval using Annoy |
+| `annoy` | Approximate nearest-neighbor retrieval using Annoy |
 | `faiss` | Similarity search using FAISS `IndexFlatIP` |
 
 ### 3.3 Voting Methods
@@ -87,7 +86,7 @@ This design avoids representation drift and reduces the risk of catastrophic for
 | `weighted` | Class score is calculated from the sum of similarity values |
 | `majority` | Class score is calculated from the number of retrieved neighbors |
 
-For most experiments, `weighted` voting is recommended because it considers both the retrieved class labels and their similarity scores.
+For most experiments, `weighted` voting is recommended because it considers both class labels and similarity scores.
 
 ---
 
@@ -99,13 +98,7 @@ For most experiments, `weighted` voting is recommended because it considers both
 pip install git+https://github.com/Hokimastah/CRISP.git
 ```
 
-### 4.2 Install from GitHub with All Optional Backends
-
-```bash
-pip install "crisp[all] @ git+https://github.com/Hokimastah/CRISP.git"
-```
-
-### 4.3 Install Locally for Development
+### 4.2 Install Locally for Development
 
 ```bash
 git clone https://github.com/Hokimastah/CRISP.git
@@ -113,33 +106,15 @@ cd CRISP
 pip install -e .
 ```
 
-### 4.4 Install with Optional Dependencies
-
-Install Annoy support:
+### 4.3 Optional Dependencies
 
 ```bash
-pip install -e ".[annoy]"
+pip install -e ".[annoy]"      # Annoy backend
+pip install -e ".[faiss]"      # FAISS backend
+pip install -e ".[clip]"       # CLIP encoder
+pip install -e ".[arcface]"    # ArcFace encoder
+pip install -e ".[all]"        # All optional components
 ```
-
-Install FAISS support:
-
-```bash
-pip install -e ".[faiss]"
-```
-
-Install CLIP support:
-
-```bash
-pip install -e ".[clip]"
-```
-
-Install all optional dependencies:
-
-```bash
-pip install -e ".[all]"
-```
-
-### 4.5 FAISS Installation Note
 
 If `faiss-cpu` cannot be installed through `pip`, especially on some Windows environments, use Conda:
 
@@ -154,27 +129,23 @@ conda install -c pytorch faiss-cpu
 CRISP expects a folder-based image classification dataset.
 
 ```text
-dataset/
+dataset_train/
 ├── class_a/
 │   ├── image_001.jpg
-│   ├── image_002.jpg
-│   └── image_003.jpg
+│   └── image_002.jpg
 ├── class_b/
-│   ├── image_004.jpg
-│   ├── image_005.jpg
-│   └── image_006.jpg
+│   ├── image_003.jpg
+│   └── image_004.jpg
 └── class_c/
-    ├── image_007.jpg
-    └── image_008.jpg
+    ├── image_005.jpg
+    └── image_006.jpg
 ```
 
 The folder name is automatically used as the class label.
 
-Example:
-
 ```text
-dataset/cat/cat_001.jpg → label = cat
-dataset/dog/dog_001.jpg → label = dog
+dataset_train/cat/cat_001.jpg → label = cat
+dataset_train/dog/dog_001.jpg → label = dog
 ```
 
 Supported image formats:
@@ -185,9 +156,43 @@ Supported image formats:
 
 ---
 
-## 6. Basic Usage
+## 6. Recommended Workflow
 
-### 6.1 ResNet50 + NumPy Retriever
+### 6.1 Python API: Train Backbone, Freeze, Index, Predict
+
+```python
+from crisp import CRISPClassifier
+
+clf = CRISPClassifier(
+    encoder="resnet50",
+    retriever="numpy",
+    pretrained=True,
+    device="cuda",
+    top_k=5,
+    voting="weighted",
+)
+
+# Step 1: train backbone on your labeled dataset.
+history = clf.fit_backbone(
+    train_folder="dataset_train",
+    epochs=10,
+    batch_size=32,
+    lr=1e-4,
+    save_path="resnet50_crisp.pt",
+)
+
+# Step 2: the backbone is now frozen. Build memory embeddings.
+clf.add_folder("dataset_train")
+clf.save("memory_bank.pkl")
+
+# Step 3: predict by retrieval and voting.
+result = clf.predict("test_image.jpg")
+print(result["predicted_label"])
+print(result["scores"])
+print(result["best_similarity"])
+```
+
+### 6.2 Load a Trained Backbone Later
 
 ```python
 from crisp import CRISPClassifier
@@ -197,35 +202,24 @@ clf = CRISPClassifier(
     retriever="numpy",
     device="cuda",
     top_k=5,
-    voting="weighted"
+    voting="weighted",
 )
 
-clf.add_folder("dataset")
+clf.load_backbone("resnet50_crisp.pt", freeze=True)
+clf.add_folder("dataset_train")
 clf.save("memory_bank.pkl")
-
-result = clf.predict("test_image.jpg")
-
-print(result["predicted_label"])
-print(result["scores"])
-print(result["best_similarity"])
 ```
 
-### 6.2 CPU Usage
+### 6.3 Predict Using Existing Backbone Weights and Memory Bank
 
 ```python
 from crisp import CRISPClassifier
 
-clf = CRISPClassifier(
-    encoder="resnet18",
-    retriever="numpy",
-    device="cpu",
-    top_k=5,
-    voting="weighted"
-)
+clf = CRISPClassifier(encoder="resnet50", retriever="numpy", device="cuda")
+clf.load_backbone("resnet50_crisp.pt", freeze=True)
+clf.load("memory_bank.pkl")
 
-clf.add_folder("dataset")
-result = clf.predict("test_image.jpg")
-
+result = clf.predict("test_image.jpg", threshold=0.65)
 print(result)
 ```
 
@@ -233,51 +227,96 @@ print(result)
 
 ## 7. Incremental Learning Usage
 
-CRISP supports add-only incremental learning. New labeled images can be added without retraining the encoder.
+After the backbone has been trained and frozen, new labeled samples can be added without retraining the backbone.
 
 ```python
 from crisp import CRISPClassifier
 
-clf = CRISPClassifier(
-    encoder="resnet50",
-    retriever="numpy",
-    device="cuda",
-    top_k=5,
-    voting="weighted"
-)
+clf = CRISPClassifier(encoder="resnet50", retriever="numpy", device="cuda")
+clf.load_backbone("resnet50_crisp.pt", freeze=True)
 
 # Initial memory
 clf.add_folder("dataset_task_1")
 clf.save("memory_task_1.pkl")
 
-# Add new data or new classes
+# Add new samples or new classes using the same frozen backbone
 clf.add_folder("dataset_task_2")
 clf.save("memory_task_2.pkl")
 
-# Predict using the updated memory
 result = clf.predict("test_image.jpg")
 print(result["predicted_label"])
 ```
 
-The flow is:
+Flow after freezing:
 
 ```text
 New image + label
-→ frozen encoder
+→ same frozen trained backbone
 → embedding vector
 → append to memory bank
 → rebuild retrieval index if required
 ```
 
-No backbone retraining is performed.
+---
+
+## 8. Command Line Interface
+
+CRISP provides a CLI command named `crisp`.
+
+### 8.1 Train ResNet Backbone
+
+```bash
+crisp train-backbone \
+  --data dataset_train \
+  --output resnet50_crisp.pt \
+  --encoder resnet50 \
+  --device cuda \
+  --epochs 10 \
+  --batch-size 32 \
+  --lr 1e-4
+```
+
+### 8.2 Build Memory Bank with Trained Backbone
+
+```bash
+crisp index \
+  --data dataset_train \
+  --output memory.pkl \
+  --encoder resnet50 \
+  --retriever numpy \
+  --backbone-weights resnet50_crisp.pt
+```
+
+### 8.3 Predict Image
+
+```bash
+crisp predict \
+  --image test_image.jpg \
+  --memory memory.pkl \
+  --encoder resnet50 \
+  --retriever numpy \
+  --top-k 5 \
+  --backbone-weights resnet50_crisp.pt
+```
+
+### 8.4 Predict with Unknown-Class Threshold
+
+```bash
+crisp predict \
+  --image test_image.jpg \
+  --memory memory.pkl \
+  --encoder resnet50 \
+  --retriever numpy \
+  --top-k 5 \
+  --threshold 0.65 \
+  --backbone-weights resnet50_crisp.pt
+```
 
 ---
 
-## 8. Using Different Retrieval Backends
+## 9. Using Different Retrieval Backends
 
-### 8.1 NumPy Retriever
-
-The NumPy backend performs exact brute-force retrieval. It is suitable for small and medium memory banks.
+### 9.1 NumPy Retriever
 
 ```python
 clf = CRISPClassifier(
@@ -287,9 +326,7 @@ clf = CRISPClassifier(
 )
 ```
 
-### 8.2 Annoy Retriever
-
-Annoy is suitable for approximate nearest neighbor search when the memory bank becomes larger.
+### 9.2 Annoy Retriever
 
 ```python
 clf = CRISPClassifier(
@@ -304,9 +341,7 @@ clf = CRISPClassifier(
 )
 ```
 
-### 8.3 FAISS Retriever
-
-FAISS is suitable for faster dense vector similarity search.
+### 9.3 FAISS Retriever
 
 ```python
 clf = CRISPClassifier(
@@ -319,17 +354,13 @@ clf = CRISPClassifier(
 
 ---
 
-## 9. Using CLIP Encoder
+## 10. Using CLIP Encoder
 
-CLIP can be used when the dataset contains semantically diverse visual classes.
-
-Install CLIP support:
+CLIP is used as a frozen encoder. The `fit_backbone()` method is currently supported only for ResNet encoders.
 
 ```bash
 pip install -e ".[clip]"
 ```
-
-Use CLIP as the encoder:
 
 ```python
 from crisp import CRISPClassifier
@@ -348,38 +379,43 @@ clf = CRISPClassifier(
 
 clf.add_folder("dataset")
 result = clf.predict("test_image.jpg")
-
-print(result["predicted_label"])
-print(result["scores"])
-```
-
-CLIP can also be combined with FAISS or Annoy:
-
-```python
-clf = CRISPClassifier(
-    encoder="clip",
-    encoder_kwargs={
-        "model_name": "ViT-B-32",
-        "pretrained": "laion2b_s34b_b79k"
-    },
-    retriever="faiss",
-    device="cuda",
-    top_k=10,
-    voting="weighted"
-)
+print(result)
 ```
 
 ---
 
-## 10. Unknown Class Detection
+## 11. Using ArcFace Encoder
+
+ArcFace is useful for face-recognition-style retrieval. Install optional dependencies first:
+
+```bash
+pip install -e ".[arcface]"
+```
+
+```python
+from crisp import CRISPClassifier
+
+clf = CRISPClassifier(
+    encoder="arcface",
+    retriever="numpy",
+    device="cuda",
+    top_k=5,
+    voting="weighted"
+)
+
+clf.add_folder("face_dataset")
+result = clf.predict("query_face.jpg")
+print(result)
+```
+
+---
+
+## 12. Unknown Class Detection
 
 CRISP can mark a query image as unknown if the best similarity score is below a threshold.
 
 ```python
-result = clf.predict(
-    "test_image.jpg",
-    threshold=0.65
-)
+result = clf.predict("test_image.jpg", threshold=0.65)
 
 print(result["status"])
 print(result["predicted_label"])
@@ -400,96 +436,44 @@ For cosine similarity, a higher value means the query is more similar to retriev
 
 ---
 
-## 11. Command Line Interface
+## 13. System Flowchart
 
-CRISP provides a CLI command named `crisp`.
-
-### 11.1 Build Memory Bank
-
-```bash
-crisp index \
-  --data dataset \
-  --output memory.pkl \
-  --encoder resnet50 \
-  --retriever numpy
-```
-
-### 11.2 Predict Image
-
-```bash
-crisp predict \
-  --image test_image.jpg \
-  --memory memory.pkl \
-  --encoder resnet50 \
-  --retriever numpy \
-  --top-k 5
-```
-
-### 11.3 Predict with Threshold
-
-```bash
-crisp predict \
-  --image test_image.jpg \
-  --memory memory.pkl \
-  --encoder resnet50 \
-  --retriever numpy \
-  --top-k 5 \
-  --threshold 0.65
-```
-
-### 11.4 CLI with Annoy
-
-```bash
-crisp index \
-  --data dataset \
-  --output memory.pkl \
-  --encoder resnet50 \
-  --retriever annoy
-
-crisp predict \
-  --image test_image.jpg \
-  --memory memory.pkl \
-  --encoder resnet50 \
-  --retriever annoy \
-  --top-k 10
-```
-
-### 11.5 CLI with CLIP
-
-```bash
-crisp index \
-  --data dataset \
-  --output memory.pkl \
-  --encoder clip \
-  --retriever numpy
-
-crisp predict \
-  --image test_image.jpg \
-  --memory memory.pkl \
-  --encoder clip \
-  --retriever numpy \
-  --top-k 5
-```
+![CRISP flowchart](src/crisp/img/image.png)
 
 ---
 
-## 12. System Flowchart
+## 14. How CRISP Works
 
-![CRISP/src/crisp/img/image.png](src/crisp/img/image.png)
+### 14.1 Backbone Training
 
-## 13. How CRISP Works
-
-### 13.1 Feature Extraction
-
-An input image is transformed into a vector embedding using a frozen encoder.
+For ResNet encoders, CRISP trains the feature extractor using a temporary linear classification head.
 
 ```text
-image → frozen encoder → embedding vector
+image → ResNet feature extractor → temporary linear head → cross-entropy loss
 ```
+
+After training, the temporary head is discarded. Only the trained feature extractor is saved and used for embedding extraction.
+
+### 14.2 Freezing
+
+After training, the backbone is frozen:
+
+```python
+for parameter in backbone.parameters():
+    parameter.requires_grad = False
+```
+
+This prevents representation drift during memory-bank updates.
+
+### 14.3 Feature Extraction
 
 For ResNet50, the final fully connected layer is removed. The output feature is taken from the pooled representation before the classifier layer.
 
-### 13.2 L2 Normalization
+```text
+image → frozen trained ResNet → embedding vector
+```
+
+### 14.4 L2 Normalization
 
 The embedding is normalized:
 
@@ -499,7 +483,7 @@ embedding = embedding / ||embedding||
 
 This makes dot product equivalent to cosine similarity when using normalized vectors.
 
-### 13.3 Memory Bank
+### 14.5 Memory Bank
 
 Each stored sample contains:
 
@@ -513,23 +497,19 @@ Each stored sample contains:
 }
 ```
 
-### 13.4 Retrieval
+### 14.6 Retrieval and Voting
 
 During inference, CRISP searches the most similar embeddings from the memory bank.
 
 ```text
-query embedding → top-k nearest neighbors
+query embedding → top-k nearest neighbors → weighted/majority voting
 ```
-
-### 13.5 Voting
 
 For weighted voting:
 
 ```text
 Score(class) = sum(similarity of neighbors from that class)
 ```
-
-The class with the highest score becomes the prediction.
 
 For majority voting:
 
@@ -539,21 +519,20 @@ Score(class) = number of retrieved neighbors from that class
 
 ---
 
-## 14. Recommended Experimental Variants
+## 15. Recommended Experimental Variants
 
 | Variant | Encoder | Retriever | Voting |
 |---|---|---|---|
-| CRISP-ResNet-Numpy | ResNet50 | NumPy | Weighted |
-| CRISP-ResNet-Annoy | ResNet50 | Annoy | Weighted |
-| CRISP-ResNet-FAISS | ResNet50 | FAISS | Weighted |
-| CRISP-CLIP-Numpy | CLIP ViT-B/32 | NumPy | Weighted |
-| CRISP-CLIP-Annoy | CLIP ViT-B/32 | Annoy | Weighted |
-| CRISP-CLIP-FAISS | CLIP ViT-B/32 | FAISS | Weighted |
-| CRISP-ResNet-Majority | ResNet50 | NumPy | Majority |
+| CRISP-ResNet-Numpy | Trained ResNet50 | NumPy | Weighted |
+| CRISP-ResNet-Annoy | Trained ResNet50 | Annoy | Weighted |
+| CRISP-ResNet-FAISS | Trained ResNet50 | FAISS | Weighted |
+| CRISP-CLIP-Numpy | Frozen CLIP ViT-B/32 | NumPy | Weighted |
+| CRISP-ArcFace-Numpy | Frozen ArcFace | NumPy | Weighted |
+| CRISP-ResNet-Majority | Trained ResNet50 | NumPy | Majority |
 
 ---
 
-## 15. Suggested Evaluation Metrics
+## 16. Suggested Evaluation Metrics
 
 For image classification experiments:
 
@@ -574,7 +553,7 @@ For incremental learning experiments:
 
 ---
 
-## 16. Project Structure
+## 17. Project Structure
 
 ```text
 CRISP/
@@ -585,7 +564,8 @@ CRISP/
 │   └── architecture.md
 ├── examples/
 │   ├── basic_usage.py
-│   └── compare_variants.py
+│   ├── compare_variants.py
+│   └── train_then_index.py
 ├── tests/
 │   ├── test_memory.py
 │   └── test_voting.py
@@ -602,7 +582,8 @@ CRISP/
         │   ├── base.py
         │   ├── factory.py
         │   ├── resnet.py
-        │   └── clip_encoder.py
+        │   ├── clip_encoder.py
+        │   └── arcface_encoder.py
         └── retrievers/
             ├── __init__.py
             ├── base.py
@@ -614,9 +595,9 @@ CRISP/
 
 ---
 
-## 17. API Reference
+## 18. API Reference
 
-### 17.1 `CRISPClassifier`
+### 18.1 `CRISPClassifier`
 
 ```python
 CRISPClassifier(
@@ -631,54 +612,44 @@ CRISPClassifier(
 )
 ```
 
-### Parameters
+### 18.2 Main Methods
 
-| Parameter | Description |
-|---|---|
-| `encoder` | Image encoder name: `resnet50`, `resnet18`, `clip`, etc. |
-| `retriever` | Retrieval backend: `numpy`, `annoy`, or `faiss` |
-| `pretrained` | Whether to use pretrained ResNet weights |
-| `device` | `cuda`, `cpu`, or `None` for automatic selection |
-| `top_k` | Number of nearest neighbors used for voting |
-| `voting` | `weighted` or `majority` |
-| `encoder_kwargs` | Additional arguments for the selected encoder |
-| `retriever_kwargs` | Additional arguments for the selected retriever |
+```python
+clf.fit_backbone(train_folder, epochs=10, batch_size=32, lr=1e-4)
+```
 
-### 17.2 Main Methods
+Train a ResNet backbone with a temporary classification head, then freeze the backbone.
+
+```python
+clf.save_backbone(path)
+clf.load_backbone(path, freeze=True)
+```
+
+Save or load ResNet feature extractor weights.
 
 ```python
 clf.add_image(image_path, label)
-```
-
-Add one labeled image to the memory bank.
-
-```python
 clf.add_folder(folder)
 ```
 
-Add a folder dataset to the memory bank.
+Add labeled images to the memory bank.
 
 ```python
 clf.predict(image_path, top_k=None, threshold=None)
 ```
 
-Predict the class of a query image.
+Predict the class of a query image by retrieval and voting.
 
 ```python
 clf.save(path)
-```
-
-Save memory bank to a `.pkl` file.
-
-```python
 clf.load(path)
 ```
 
-Load memory bank from a `.pkl` file.
+Save or load the memory bank.
 
 ---
 
-## 18. Output Format
+## 19. Output Format
 
 Example prediction output:
 
@@ -708,11 +679,13 @@ Example prediction output:
 
 ---
 
-## 19. Notes and Limitations
+## 20. Notes and Limitations
 
-- The encoder is frozen, so CRISP does not fine-tune the backbone during incremental updates.
-- The same encoder must be used when saving and loading memory banks.
-- If the encoder is changed, the memory bank should be rebuilt.
+- `fit_backbone()` currently supports ResNet encoders only.
+- CLIP and ArcFace are used as frozen encoders.
+- The same backbone weights must be used when indexing and predicting.
+- If backbone weights change, rebuild the memory bank.
+- The memory bank stores embeddings, labels, and metadata only; it does not store backbone weights.
 - `numpy` retrieval is exact but may be slower for large memory banks.
 - `annoy` is approximate and may trade accuracy for speed.
 - `faiss` is usually better for larger vector collections.
@@ -721,20 +694,20 @@ Example prediction output:
 
 ---
 
-## 20. License
+## 21. License
 
 This project is released under the MIT License.
 
 ---
 
-## 21. Citation
+## 22. Citation
 
 If you use CRISP in an academic project, you can cite this repository as:
 
 ```bibtex
 @software{crisp2026,
   title = {CRISP: Continual Retrieval & Indexing System for Perception},
-  author = {Satrio Puji Danuirto},
+  author = {Satrio Puji Danutirto},
   year = {2026},
   url = {https://github.com/Hokimastah/CRISP}
 }

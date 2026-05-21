@@ -1,8 +1,11 @@
+from pathlib import Path
+
 from crisp import CRISPClassifier
 
 
-DATASET_DIR = "dataset"
+DATASET_DIR = "dataset_train"
 TEST_IMAGE = "test_image.jpg"
+BACKBONE_WEIGHTS = "resnet50_crisp.pt"
 
 
 def run_variant(name, encoder, retriever, encoder_kwargs=None, retriever_kwargs=None):
@@ -18,6 +21,9 @@ def run_variant(name, encoder, retriever, encoder_kwargs=None, retriever_kwargs=
         voting="weighted",
     )
 
+    if encoder.startswith("resnet") and Path(BACKBONE_WEIGHTS).exists():
+        clf.load_backbone(BACKBONE_WEIGHTS, freeze=True)
+
     clf.add_folder(DATASET_DIR)
     result = clf.predict(TEST_IMAGE)
 
@@ -26,9 +32,9 @@ def run_variant(name, encoder, retriever, encoder_kwargs=None, retriever_kwargs=
 
 
 def main():
-    run_variant("ResNet50 + NumPy", "resnet50", "numpy")
-    run_variant("ResNet50 + Annoy", "resnet50", "annoy", retriever_kwargs={"n_trees": 20})
-    run_variant("ResNet50 + FAISS", "resnet50", "faiss")
+    run_variant("Trained ResNet50 + NumPy", "resnet50", "numpy")
+    run_variant("Trained ResNet50 + Annoy", "resnet50", "annoy", retriever_kwargs={"n_trees": 20})
+    run_variant("Trained ResNet50 + FAISS", "resnet50", "faiss")
 
     run_variant(
         "CLIP + NumPy",

@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any, Dict, Optional
 
 from .base import BaseImageEncoder
-from .resnet import ResNetEncoder
 
 
 def build_encoder(
@@ -16,6 +15,8 @@ def build_encoder(
     encoder = encoder.lower()
 
     if encoder.startswith("resnet"):
+        from .resnet import ResNetEncoder
+
         return ResNetEncoder(
             backbone=encoder,
             pretrained=pretrained,
@@ -25,8 +26,9 @@ def build_encoder(
 
     if encoder == "clip":
         from .clip_encoder import CLIPEncoder
+
         return CLIPEncoder(device=device, **encoder_kwargs)
 
     raise ValueError(
-        "Unsupported encoder. Use one of: resnet18, resnet34, resnet50, resnet101, resnet152, clip"
+        "Unsupported encoder. Use one of: resnet18, resnet34, resnet50, resnet101, resnet152, clip, arcface"
     )

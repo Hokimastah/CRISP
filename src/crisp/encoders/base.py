@@ -8,7 +8,7 @@ from PIL import Image
 
 class BaseImageEncoder(ABC):
     """
-    Abstract interface for frozen image encoders.
+    Abstract interface for image encoders used by CRISP.
     """
 
     feature_dim: int
